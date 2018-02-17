@@ -1,0 +1,43 @@
+#!/bin/bash
+# version 1 01/30/2017
+# by thecpanelguy@gmail.com
+
+# A tool that changes cpanel account password defined within a provide CSV file.
+# cPanel username must be column 2 and password must be  column 3
+# output progress, does not output passwords.
+# uses cPanel's whmapi1 tool to conduct the passwd change so all elements required by cPanel are changed accordingly
+# sample CSV file:
+# domain, username, password"
+
+if [[ -e $1 ]]; then
+        awk -F, '
+        BEGIN {
+            print "Processing CSV file (each dot represents 100 accounts)."
+            printf "Progress"
+            split("",LIST,"")
+        }
+
+        NR>1{
+            COUNT++
+            LIST[length(LIST)+1]="whmapi1 passwd user=" $2 " password=" $3 " 2>&1"
+            if (COUNT==100) {
+                COUNT=0
+                printf "."
+            }
+        }
+
+        END {
+            print "done."
+            print "Processing entries in order received."
+            print "Found",NR,"entries. Processing:"
+            n=length(LIST)
+            for (i=1;i<=n;i++) {
+                print "["i"/"NR"] ("gensub(/.*user=([^ ]+).*/,"\\1","g",LIST[i])")"
+                while(LIST[i]|getline x) print "\t"x;
+                close(LIST[i])
+            }
+
+        }' $1
+else
+    echo "Syntax: $(basename $0) </path/to/csv/file>"
+fi
